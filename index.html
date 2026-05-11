@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vyn+ | Reactive Front-End Language</title>
+    <style>
+        /* --- Design System & Variables --- */
+        :root {
+            --primary-blue: #007AFF;
+            --primary-blue-glow: rgba(0, 122, 255, 0.3);
+            --soft-gray: #A1A1A6;
+            --pure-white: #FFFFFF;
+            --deep-black: #000000;
+            --surface-color: #0A0A0C;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --glass-bg: rgba(10, 10, 12, 0.6);
+            --easing: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* --- Global Reset & Typography --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            background-color: var(--deep-black);
+            color: var(--pure-white);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        ul {
+            list-style: none;
+        }
+
+        /* --- Utility Classes --- */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 1s var(--easing), transform 1s var(--easing);
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .tag {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--primary-blue);
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: inline-block;
+        }
+
+        /* --- Navbar --- */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 100;
+            transition: all 0.4s var(--easing);
+            padding: 20px 0;
+            border-bottom: 1px solid transparent;
+        }
+
+        nav.scrolled {
+            padding: 16px 0;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            font-size: 1.2rem;
+            letter-spacing: -0.02em;
+        }
+
+        .logo-img {
+            height: 28px;
+            width: auto;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            font-size: 0.9rem;
+            color: var(--soft-gray);
+        }
+
+        .nav-links a {
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--pure-white);
+        }
+
+        /* --- Hero Section --- */
+        .hero {
+            position: relative;
+            padding: 200px 0 120px;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--primary-blue-glow) 0%, transparent 60%);
+            filter: blur(80px);
+            z-index: -1;
+            opacity: 0.6;
+            animation: pulse-glow 8s infinite alternate;
+        }
+
+        .hero h1 {
+            font-size: clamp(3rem, 6vw, 5rem);
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            background: linear-gradient(180deg, #FFFFFF 0%, #A1A1A6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: clamp(1.1rem, 2vw, 1.4rem);
+            color: var(--soft-gray);
+            max-width: 600px;
+            margin: 0 auto 48px;
+            letter-spacing: -0.01em;
+        }
+
+        .hero-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s var(--easing);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: var(--primary-blue);
+            color: var(--pure-white);
+            border: 1px solid transparent;
+            box-shadow: 0 4px 20px rgba(0, 122, 255, 0.2);
+        }
+
+        .btn-primary:hover {
+            background: #006ae0;
+            box-shadow: 0 8px 30px rgba(0, 122, 255, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--pure-white);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* --- Section Defaults --- */
+        section {
+            padding: 120px 0;
+            position: relative;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .section-header h2 {
+            font-size: 2.5rem;
+            letter-spacing: -0.03em;
+            margin-bottom: 16px;
+        }
+
+        .section-header p {
+            color: var(--soft-gray);
+            font-size: 1.1rem;
+        }
+
+        /* --- Features Section --- */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .feature-card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 32px;
+            transition: all 0.4s var(--easing);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.05) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.4s var(--easing);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .feature-card:hover::after {
+            opacity: 1;
+        }
+
+        .feature-icon {
+            width: 40px;
+            height: 40px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            color: var(--primary-blue);
+            background: rgba(0, 122, 255, 0.05);
+        }
+
+        .feature-card h3 {
+            font-size: 1.2rem;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .feature-card p {
+            color: var(--soft-gray);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        /* --- Syntax Preview Section --- */
+        .syntax-container {
+            background: #0f0f12;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            margin: 0 auto;
+            max-width: 800px;
+        }
+
+        .syntax-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .dot.red { background-color: #ff5f56; }
+        .dot.yellow { background-color: #ffbd2e; }
+        .dot.green { background-color: #27c93f; }
+
+        .file-name {
+            color: var(--soft-gray);
+            font-size: 0.85rem;
+            font-family: monospace;
+        }
+
+        .copy-btn {
+            background: transparent;
+            border: none;
+            color: var(--soft-gray);
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: color 0.3s;
+        }
+
+        .copy-btn:hover {
+            color: var(--pure-white);
+        }
+
+        pre {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            overflow-x: auto;
+            color: #d4d4d4;
+        }
+
+        /* Syntax Highlighting Colors */
+        .kw { color: #569cd6; font-weight: 600; } /* Keywords */
+        .str { color: #ce9178; } /* Strings */
+        .prop { color: #9cdcfe; } /* Properties */
+        .punc { color: #808080; } /* Punctuation */
+        .num { color: #b5cea8; } /* Numbers */
+        .cls { color: #4ec9b0; } /* Classes/Types */
+
+        /* --- What is Vyn+ Section --- */
+        .about-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 64px;
+            align-items: center;
+        }
+
+        .about-text h3 {
+            font-size: 2rem;
+            margin-bottom: 24px;
+            letter-spacing: -0.02em;
+        }
+
+        .about-text p {
+            color: var(--soft-gray);
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+        }
+
+        .about-list {
+            margin-top: 32px;
+        }
+
+        .about-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 16px;
+            color: var(--pure-white);
+        }
+
+        .about-list li::before {
+            content: '✓';
+            color: var(--primary-blue);
+            font-weight: bold;
+        }
+
+        /* --- Playground Section --- */
+        .playground-ui {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 400px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        .play-editor, .play-output {
+            padding: 32px;
+        }
+
+        .play-editor {
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .play-output {
+            background: #050505;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+        }
+
+        .run-btn {
+            margin-top: auto;
+            align-self: flex-start;
+            background: rgba(0, 122, 255, 0.1);
+            color: var(--primary-blue);
+            border: 1px solid rgba(0, 122, 255, 0.2);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .run-btn:hover {
+            background: rgba(0, 122, 255, 0.2);
+            border-color: rgba(0, 122, 255, 0.4);
+        }
+
+        .output-screen {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--soft-gray);
+            font-family: monospace;
+            font-size: 0.9rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .loader {
+            display: none;
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--primary-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .render-result {
+            display: none;
+            animation: fade-in 0.5s var(--easing);
+        }
+
+        .mock-ui-box {
+            background: var(--primary-blue);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-family: -apple-system, sans-serif;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,122,255,0.3);
+        }
+
+        /* --- Footer --- */
+        footer {
+            border-top: 1px solid var(--border-color);
+            padding: 64px 0 32px;
+            background: #050505;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 48px;
+        }
+
+        .footer-brand p {
+            color: var(--soft-gray);
+            font-size: 0.9rem;
+            margin-top: 12px;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 64px;
+        }
+
+        .footer-col h4 {
+            font-size: 0.9rem;
+            margin-bottom: 16px;
+            color: var(--pure-white);
+        }
+
+        .footer-col ul li {
+            margin-bottom: 12px;
+        }
+
+        .footer-col ul a {
+            color: var(--soft-gray);
+            font-size: 0.85rem;
+            transition: color 0.3s;
+        }
+
+        .footer-col ul a:hover {
+            color: var(--pure-white);
+        }
+
+        .footer-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 32px;
+            border-top: 1px solid var(--border-color);
+            color: var(--soft-gray);
+            font-size: 0.8rem;
+        }
+
+        /* --- Animations --- */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+            100% { transform: translateY(0px); }
+        }
+
+        @keyframes pulse-glow {
+            0% { opacity: 0.4; transform: translate(-50%, -50%) scale(0.95); }
+            100% { opacity: 0.7; transform: translate(-50%, -50%) scale(1.05); }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- Media Queries --- */
+        @media (max-width: 768px) {
+            .nav-links { display: none; } /* Simplified for mobile */
+            .hero h1 { font-size: 2.5rem; }
+            .about-content { grid-template-columns: 1fr; gap: 32px; }
+            .playground-ui { grid-template-columns: 1fr; }
+            .play-editor { border-right: none; border-bottom: 1px solid var(--border-color); }
+            .footer-content { flex-direction: column; gap: 32px; }
+            .footer-links { flex-direction: column; gap: 32px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav id="navbar">
+        <div class="container nav-content">
+            <div class="logo-container">
+                <img src="logo.png" alt="Vyn+ Logo" class="logo-img" onerror="this.style.display='none'">
+                <span>Vyn+</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="#docs">Docs</a></li>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#playground">Playground</a></li>
+                <li><a href="#github">GitHub</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header class="hero reveal">
+        <div class="container">
+            <span class="tag">Introducing Vyn+</span>
+            <h1 id="hero-title">A reactive language for <br>modern UI systems</h1>
+            <p>Built for front-end data orchestration, state management, and declarative UI logic.</p>
+            <div class="hero-buttons">
+                <a href="#get-started" class="btn btn-primary">Get Started</a>
+                <a href="#syntax" class="btn btn-secondary">View Syntax</a>
+            </div>
+        </div>
+    </header>
+
+    <section id="features" class="container">
+        <div class="section-header reveal">
+            <h2>Engineering Precision.</h2>
+            <p>Designed from the ground up to solve complex front-end architecture.</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card reveal">
+                <div class="feature-icon">⚡</div>
+                <h3>Reactive Data Binding</h3>
+                <p>An engine that intrinsically links state and view without external hooks or boilerplate. Data updates inherently cascade.</p>
+            </div>
+            <div class="feature-card reveal" style="transition-delay: 0.1s;">
+                <div class="feature-icon">🏗️</div>
+                <h3>Front-End State First</h3>
+                <p>Architected around how data moves in modern applications, prioritizing state synchronization over DOM manipulation.</p>
+            </div>
+            <div class="feature-card reveal" style="transition-delay: 0.2s;">
+                <div class="feature-icon">🪶</div>
+                <h3>Lightweight Syntax</h3>
+                <p>No unnecessary tags or clutter. A clean, block-based syntax that feels natural and reduces visual noise.</p>
+            </div>
+            <div class="feature-card reveal" style="transition-delay: 0.3s;">
+                <div class="feature-icon">🌊</div>
+                <h3>Component Data Streams</h3>
+                <p>Isolate and stream data precisely at the component level, drastically minimizing re-renders and logic bleed.</p>
+            </div>
+            <div class="feature-card reveal" style="transition-delay: 0.4s;">
+                <div class="feature-icon">🎨</div>
+                <h3>Built for UI-first</h3>
+                <p>Not a general purpose tool. Vyn+ is heavily optimized specifically for constructing structured, scalable user interfaces.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="syntax" class="container">
+        <div class="section-header reveal">
+            <h2>Beautifully Structured.</h2>
+            <p>Familiar enough to learn quickly, powerful enough to scale.</p>
+        </div>
+        <div class="syntax-container reveal">
+            <div class="syntax-header">
+                <div class="window-controls">
+                    <div class="dot red"></div>
+                    <div class="dot yellow"></div>
+                    <div class="dot green"></div>
+                </div>
+                <div class="file-name">landing.vyn</div>
+                <button class="copy-btn" onclick="copyCode()">Copy Code</button>
+            </div>
+            <pre><code><span class="kw">page</span> <span class="cls">Landing</span> <span class="punc">{</span>
+
+    <span class="kw">meta</span> <span class="punc">{</span>
+        <span class="prop">title</span><span class="punc">:</span> <span class="str">"Vyn+"</span>
+    <span class="punc">}</span>
+
+    <span class="kw">theme</span> dark <span class="punc">{</span>
+        <span class="prop">color.accent</span><span class="punc">:</span> blue<span class="punc">;</span>
+        <span class="prop">color.surface</span><span class="punc">:</span> slate<span class="punc">;</span>
+        <span class="prop">color.text</span><span class="punc">:</span> white<span class="punc">;</span>
+        <span class="prop">color.bg</span><span class="punc">:</span> black<span class="punc">;</span>
+    <span class="punc">}</span>
+
+    <span class="kw">layout</span> root <span class="punc">{</span>
+        <span class="prop">display</span><span class="punc">:</span> flex<span class="punc">;</span>
+        <span class="prop">direction</span><span class="punc">:</span> column<span class="punc">;</span>
+        <span class="prop">gap</span><span class="punc">:</span> <span class="num">24px</span><span class="punc">;</span>
+    <span class="punc">}</span>
+
+    <span class="kw">component</span> hero <span class="punc">{</span>
+
+        <span class="kw">props</span> <span class="punc">{</span>
+            <span class="prop">headline</span><span class="punc">:</span> <span class="str">"This is Vyn+"</span><span class="punc">;</span>
+            <span class="prop">subtitle</span><span class="punc">:</span> <span class="str">"A simplified language for building structured UI"</span><span class="punc">;</span>
+        <span class="punc">}</span>
+
+        <span class="kw">actions</span> <span class="punc">{</span>
+            <span class="kw">button.primary</span> <span class="punc">{</span>
+                <span class="prop">label</span><span class="punc">:</span> <span class="str">"Get Started"</span><span class="punc">;</span>
+                <span class="prop">route</span><span class="punc">:</span> <span class="str">"/start"</span><span class="punc">;</span>
+            <span class="punc">}</span>
+
+            <span class="kw">button.secondary</span> <span class="punc">{</span>
+                <span class="prop">label</span><span class="punc">:</span> <span class="str">"Docs"</span><span class="punc">;</span>
+                <span class="prop">route</span><span class="punc">:</span> <span class="str">"/docs"</span><span class="punc">;</span>
+            <span class="punc">}</span>
+        <span class="punc">}</span>
+    <span class="punc">}</span>
+
+    <span class="kw">component</span> features <span class="punc">{</span>
+
+        <span class="kw">grid</span> <span class="punc">{</span>
+            <span class="prop">columns</span><span class="punc">:</span> <span class="num">3</span><span class="punc">;</span>
+            <span class="prop">gap</span><span class="punc">:</span> <span class="num">20px</span><span class="punc">;</span>
+        <span class="punc">}</span>
+
+        <span class="kw">card</span> <span class="punc">{</span>
+            <span class="prop">title</span><span class="punc">:</span> <span class="str">"Minimal Structure"</span><span class="punc">;</span>
+            <span class="prop">body</span><span class="punc">:</span> <span class="str">"No tags. No clutter. Just clean blocks."</span><span class="punc">;</span>
+        <span class="punc">}</span>
+
+        <span class="kw">card</span> <span class="punc">{</span>
+            <span class="prop">title</span><span class="punc">:</span> <span class="str">"State Driven UI"</span><span class="punc">;</span>
+            <span class="prop">body</span><span class="punc">:</span> <span class="str">"UI updates directly from data."</span><span class="punc">;</span>
+        <span class="punc">}</span>
+
+        <span class="kw">card</span> <span class="punc">{</span>
+            <span class="prop">title</span><span class="punc">:</span> <span class="str">"Readable Syntax"</span><span class="punc">;</span>
+            <span class="prop">body</span><span class="punc">:</span> <span class="str">"Designed to stay simple at any scale."</span><span class="punc">;</span>
+        <span class="punc">}</span>
+    <span class="punc">}</span>
+<span class="punc">}</span></code></pre>
+        </div>
+    </section>
+
+    <section class="container reveal">
+        <div class="about-content">
+            <div class="about-text">
+                <span class="tag">Philosophy</span>
+                <h3>What exactly is Vyn+?</h3>
+                <p>Vyn+ is not a general-purpose programming language. It is a highly specialized domain-specific language (DSL) engineered explicitly for front-end data orchestration.</p>
+                <p>Traditional frameworks require developers to manually bridge complex JavaScript logic with HTML rendering. Vyn+ dissolves this boundary by treating state, logic, and UI binding as a single, cohesive system.</p>
+                
+                <ul class="about-list">
+                    <li>Simplifies massive UI state complexity.</li>
+                    <li>Compiles directly to highly optimized WebAssembly and DOM ops.</li>
+                    <li>Bridges business logic and UI binding naturally.</li>
+                </ul>
+            </div>
+            <div class="about-visual">
+                <div style="background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(0,122,255,0.1)); border: 1px solid var(--border-color); border-radius: 24px; padding: 48px; text-align: center;">
+                    <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="var(--primary-blue)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                        <path d="M2 17l10 5 10-5"></path>
+                        <path d="M2 12l10 5 10-5"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="playground" class="container reveal">
+        <div class="section-header">
+            <h2>Interactive Playground.</h2>
+            <p>Experience the reactivity of Vyn+ instantly.</p>
+        </div>
+        <div class="playground-ui">
+            <div class="play-editor">
+                <div style="color: var(--soft-gray); margin-bottom: 16px; font-size: 0.85rem; font-family: monospace;">// Try running this Vyn+ component</div>
+                <pre style="margin-bottom: 24px;"><code><span class="kw">component</span> demo <span class="punc">{</span>
+    <span class="kw">state</span> <span class="punc">{</span>
+        <span class="prop">status</span><span class="punc">:</span> <span class="str">"Ready"</span><span class="punc">;</span>
+    <span class="punc">}</span>
+    <span class="kw">render</span> <span class="punc">{</span>
+        <span class="kw">ui.box</span> <span class="punc">{</span>
+            <span class="prop">text</span><span class="punc">:</span> <span class="str">"System is {status}"</span><span class="punc">;</span>
+        <span class="punc">}</span>
+    <span class="punc">}</span>
+<span class="punc">}</span></code></pre>
+                <button class="run-btn" id="runCodeBtn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    Run Vyn+ Code
+                </button>
+            </div>
+            <div class="play-output">
+                <div class="output-screen" id="outputScreen">
+                    <span id="outputInitial" style="opacity: 0.5;">Waiting for execution...</span>
+                    <div class="loader" id="outputLoader"></div>
+                    <div class="render-result" id="outputResult">
+                        <div class="mock-ui-box">System is Active</div>
+                        <div style="font-family: monospace; font-size: 0.75rem; color: #27c93f; margin-top: 16px;">Compiled in 12ms</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="logo-container">
+                        <img src="logo.png" alt="Vyn+ Logo" class="logo-img" style="height: 20px;" onerror="this.style.display='none'">
+                        <span>Vyn+</span>
+                    </div>
+                    <p>A reactive language for modern UI.</p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-col">
+                        <h4>Resources</h4>
+                        <ul>
+                            <li><a href="#">Documentation</a></li>
+                            <li><a href="#">Learn Vyn+</a></li>
+                            <li><a href="#">Playground</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-col">
+                        <h4>Community</h4>
+                        <ul>
+                            <li><a href="#">GitHub</a></li>
+                            <li><a href="#">Discord</a></li>
+                            <li><a href="#">Twitter / X</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Vyn+ Project.</p>
+                <p>Experimental language project.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Navbar Blur on Scroll
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        // Subtle Hero Parallax
+        const heroTitle = document.getElementById('hero-title');
+        window.addEventListener('scroll', () => {
+            const scrollPos = window.scrollY;
+            if (scrollPos < 600) {
+                heroTitle.style.transform = `translateY(${scrollPos * 0.15}px)`;
+            }
+        });
+
+        // Intersection Observer for Fade-ins
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.15
+        };
+
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.reveal').forEach(element => {
+            observer.observe(element);
+        });
+
+        // Fake Playground Logic
+        const runBtn = document.getElementById('runCodeBtn');
+        const outputInitial = document.getElementById('outputInitial');
+        const outputLoader = document.getElementById('outputLoader');
+        const outputResult = document.getElementById('outputResult');
+
+        runBtn.addEventListener('click', () => {
+            // Reset UI
+            outputInitial.style.display = 'none';
+            outputResult.style.display = 'none';
+            outputLoader.style.display = 'block';
+            runBtn.style.opacity = '0.5';
+            runBtn.style.pointerEvents = 'none';
+            runBtn.innerHTML = 'Compiling...';
+
+            // Simulate compilation time
+            setTimeout(() => {
+                outputLoader.style.display = 'none';
+                outputResult.style.display = 'block';
+                runBtn.style.opacity = '1';
+                runBtn.style.pointerEvents = 'auto';
+                runBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Run Again';
+            }, 800);
+        });
+
+        // Copy Code Functionality
+        function copyCode() {
+            const codeText = `page Landing {
+
+    meta {
+        title: "Vyn+"
+    }
+
+    theme dark {
+        color.accent: blue;
+        color.surface: slate;
+        color.text: white;
+        color.bg: black;
+    }
+
+    layout root {
+        display: flex;
+        direction: column;
+        gap: 24px;
+    }
+
+    component hero {
+
+        props {
+            headline: "This is Vyn+";
+            subtitle: "A simplified language for building structured UI";
+        }
+
+        actions {
+            button.primary {
+                label: "Get Started";
+                route: "/start";
+            }
+
+            button.secondary {
+                label: "Docs";
+                route: "/docs";
+            }
+        }
+    }
+
+    component features {
+
+        grid {
+            columns: 3;
+            gap: 20px;
+        }
+
+        card {
+            title: "Minimal Structure";
+            body: "No tags. No clutter. Just clean blocks.";
+        }
+
+        card {
+            title: "State Driven UI";
+            body: "UI updates directly from data.";
+        }
+
+        card {
+            title: "Readable Syntax";
+            body: "Designed to stay simple at any scale.";
+        }
+    }
+}`;
+            navigator.clipboard.writeText(codeText).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                const originalText = btn.innerText;
+                btn.innerText = 'Copied!';
+                btn.style.color = '#27c93f';
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.style.color = 'var(--soft-gray)';
+                }, 2000);
+            });
+        }
+        
+        // Initial load trigger for elements already in viewport
+        setTimeout(() => {
+            document.querySelectorAll('.reveal').forEach(el => {
+                const rect = el.getBoundingClientRect();
+                if (rect.top < window.innerHeight) {
+                    el.classList.add('active');
+                }
+            });
+        }, 100);
+    </script>
+</body>
+</html>
