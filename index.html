@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyTime - Global Time Translator</title>
+    <style>
+        /* * 4. Color System & 12. Extra Polish (Variables)
+         */
+        :root {
+            /* Palette */
+            --bg-base: #000000;
+            --bg-elevated: #0a0a0c;
+            --text-primary: #ffffff;
+            --text-secondary: #8e8e93;
+            --text-tertiary: #636366;
+            
+            /* Accent (Very subtle dark aqua) */
+            --accent: #005B7F;
+            --accent-glow: rgba(0, 91, 127, 0.3);
+            --accent-light: rgba(0, 91, 127, 0.15);
+
+            /* Glassmorphism */
+            --glass-bg: rgba(255, 255, 255, 0.04);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            
+            /* System */
+            --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --radius-sm: 8px;
+            --radius-md: 16px;
+            --radius-lg: 24px;
+            --spacing-unit: 8px;
+        }
+
+        /* * Base Reset & Typography
+         */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(255, 255, 255, 0.02) 0%, transparent 50%);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-base);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+
+        /* * 7. Layout Structure
+         */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: calc(var(--spacing-unit) * 4) calc(var(--spacing-unit) * 3);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: calc(var(--spacing-unit) * 6);
+            animation: fadeIn 1s ease forwards;
+        }
+
+        .logo-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: calc(var(--spacing-unit) * 2);
+        }
+
+        .logo {
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+            border-radius: var(--radius-sm);
+            /* Fallback styling if logo.png is missing */
+            background-color: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: calc(var(--spacing-unit) * 1);
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 400;
+            letter-spacing: -0.01em;
+        }
+
+        /* Controls Section */
+        .controls-wrapper {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: var(--radius-lg);
+            padding: calc(var(--spacing-unit) * 3);
+            display: flex;
+            flex-wrap: wrap;
+            gap: calc(var(--spacing-unit) * 2);
+            align-items: flex-end;
+            margin-bottom: calc(var(--spacing-unit) * 6);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            animation: slideUpFade 0.8s ease forwards;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: calc(var(--spacing-unit) * 1);
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .input-group label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding-left: 4px;
+        }
+
+        input[type="time"], select {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            padding: 14px 16px;
+            border-radius: var(--radius-md);
+            font-size: 1rem;
+            font-family: inherit;
+            outline: none;
+            transition: all 0.2s ease;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        /* Customizing select arrow */
+        select {
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%238e8e93%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px top 50%;
+            background-size: 10px auto;
+            padding-right: 40px;
+        }
+
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            filter: invert(1) opacity(0.6);
+            cursor: pointer;
+        }
+
+        input[type="time"]:focus, select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px var(--accent);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .btn-translate {
+            background: var(--accent);
+            color: var(--text-primary);
+            border: none;
+            padding: 14px 32px;
+            border-radius: var(--radius-md);
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            height: 48px; /* Match input height */
+            min-width: 140px;
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+
+        .btn-translate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--accent-glow);
+            filter: brightness(1.1);
+        }
+
+        .btn-translate:active {
+            transform: translateY(0);
+        }
+
+        /* Results Section */
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: calc(var(--spacing-unit) * 3);
+            opacity: 0; /* Hidden until first translation */
+            transition: opacity 0.5s ease;
+        }
+
+        .results-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: calc(var(--spacing-unit) * 2);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        /* Timezone Cards */
+        .tz-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            padding: calc(var(--spacing-unit) * 2.5);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease, background 0.3s ease, border-color 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            gap: calc(var(--spacing-unit) * 1);
+        }
+
+        .tz-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--accent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .tz-card:hover {
+            transform: scale(1.02);
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .tz-card:hover::before {
+            opacity: 1;
+        }
+
+        .tz-city {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .tz-time-container {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin: calc(var(--spacing-unit) * 1) 0;
+        }
+
+        .tz-time {
+            font-size: 2rem;
+            font-weight: 300;
+            letter-spacing: -0.02em;
+        }
+
+        .tz-day-badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            padding: 4px 8px;
+            border-radius: 20px;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-today {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+        }
+
+        .badge-tomorrow {
+            background: var(--accent-light);
+            color: #4da6ff;
+        }
+
+        .badge-yesterday {
+            background: rgba(255, 100, 100, 0.15);
+            color: #ff8080;
+        }
+
+        .tz-label {
+            font-size: 0.85rem;
+            color: var(--text-tertiary);
+            margin-top: auto;
+        }
+
+        /* * 10. Footer 
+         */
+        footer {
+            text-align: center;
+            padding: calc(var(--spacing-unit) * 4) 0;
+            margin-top: auto;
+            opacity: 0.4;
+            font-size: 0.85rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            transition: opacity 0.3s ease;
+        }
+
+        footer:hover {
+            opacity: 0.8;
+        }
+
+        /* * 6. Required Custom Loading Animation 
+         */
+        #loader-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 5, 5, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+
+        #loader-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .spinner-container {
+            position: relative;
+            width: 64px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: calc(var(--spacing-unit) * 3);
+        }
+
+        .spinner-ring {
+            position: absolute;
+            inset: 0;
+            border: 2px solid var(--glass-border);
+            border-radius: 50%;
+        }
+
+        .spinner-ring::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border: 2px solid transparent;
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+            box-shadow: 0 -4px 16px var(--accent-glow);
+        }
+        
+        .spinner-core {
+            width: 12px;
+            height: 12px;
+            background: var(--text-primary);
+            border-radius: 50%;
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.5);
+            animation: pulseCore 1.2s ease-in-out infinite;
+        }
+
+        .loader-text {
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            font-weight: 400;
+            letter-spacing: 0.05em;
+            animation: pulseText 1.5s ease-in-out infinite;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        /* * Keyframes
+         */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulseCore {
+            0%, 100% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1.2); opacity: 1; }
+        }
+
+        @keyframes pulseText {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .controls-wrapper {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .btn-translate {
+                width: 100%;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loader-overlay">
+        <div class="spinner-container">
+            <div class="spinner-ring"></div>
+            <div class="spinner-core"></div>
+        </div>
+        <div class="loader-text">Syncing time across zones...</div>
+    </div>
+
+    <div class="container">
+        <header>
+            <div class="logo-container">
+                <img src="logo.png" alt="Logo" class="logo" onerror="this.style.display='none'; this.outerHTML='<div class=\'logo\'>MT</div>'">
+            </div>
+            <h1>MyTime</h1>
+            <p class="subtitle">Translate time across the world instantly</p>
+        </header>
+
+        <main>
+            <section class="controls-wrapper">
+                <div class="input-group">
+                    <label for="timeInput">Time</label>
+                    <input type="time" id="timeInput" required>
+                </div>
+                
+                <div class="input-group">
+                    <label for="sourceTimezone">Source Timezone</label>
+                    <select id="sourceTimezone"></select>
+                </div>
+
+                <button class="btn-translate" id="btnTranslate">Translate</button>
+            </section>
+
+            <div class="results-header" id="resultsHeader">
+                <h2>Global Times</h2>
+            </div>
+            <section class="results-grid" id="resultsGrid">
+                </section>
+        </main>
+
+        <footer>
+            Built by 7z8z
+        </footer>
+    </div>
+
+    <script>
+        /**
+         * 2. Supported Time Zones (Extensive List)
+         */
+        const timezones = [
+            { id: "America/New_York", name: "New York" },
+            { id: "America/Los_Angeles", name: "Los Angeles" },
+            { id: "America/Chicago", name: "Chicago" },
+            { id: "America/Denver", name: "Denver" },
+            { id: "America/Toronto", name: "Toronto" },
+            { id: "America/Vancouver", name: "Vancouver" },
+            { id: "America/Sao_Paulo", name: "São Paulo" },
+            { id: "America/Mexico_City", name: "Mexico City" },
+            { id: "Europe/London", name: "London" },
+            { id: "Europe/Paris", name: "Paris" },
+            { id: "Europe/Berlin", name: "Berlin" },
+            { id: "Europe/Rome", name: "Rome" },
+            { id: "Europe/Madrid", name: "Madrid" },
+            { id: "Europe/Amsterdam", name: "Amsterdam" },
+            { id: "Europe/Moscow", name: "Moscow" },
+            { id: "Asia/Dubai", name: "Dubai" },
+            { id: "Asia/Kolkata", name: "India" },
+            { id: "Asia/Mumbai", name: "Mumbai" },
+            { id: "Asia/Singapore", name: "Singapore" },
+            { id: "Asia/Tokyo", name: "Tokyo" },
+            { id: "Asia/Seoul", name: "Seoul" },
+            { id: "Asia/Shanghai", name: "Shanghai" },
+            { id: "Asia/Hong_Kong", name: "Hong Kong" },
+            { id: "Australia/Sydney", name: "Sydney" },
+            { id: "Australia/Melbourne", name: "Melbourne" },
+            { id: "Africa/Johannesburg", name: "South Africa" },
+            { id: "Africa/Cairo", name: "Cairo" },
+            { id: "Pacific/Auckland", name: "New Zealand" },
+            { id: "UTC", name: "Universal Time" }
+        ];
+
+        // DOM Elements
+        const timeInput = document.getElementById('timeInput');
+        const sourceTimezoneSelect = document.getElementById('sourceTimezone');
+        const btnTranslate = document.getElementById('btnTranslate');
+        const loaderOverlay = document.getElementById('loader-overlay');
+        const resultsGrid = document.getElementById('resultsGrid');
+        const resultsHeader = document.getElementById('resultsHeader');
+
+        /**
+         * Initialize App
+         */
+        function init() {
+            // Populate select dropdown
+            timezones.forEach(tz => {
+                const option = document.createElement('option');
+                option.value = tz.id;
+                option.textContent = `${tz.name} (${tz.id})`;
+                sourceTimezoneSelect.appendChild(option);
+            });
+
+            // Set default time to current local time
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const mins = String(now.getMinutes()).padStart(2, '0');
+            timeInput.value = `${hours}:${mins}`;
+
+            // Try to auto-detect user's timezone, fallback to NY
+            const userTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            if (timezones.find(t => t.id === userTZ)) {
+                sourceTimezoneSelect.value = userTZ;
+            } else {
+                sourceTimezoneSelect.value = 'America/New_York';
+            }
+        }
+
+        /**
+         * Gets the current offset in minutes for a specific IANA timezone.
+         * Using the current date ensures daylight saving rules are respected accurately.
+         */
+        function getOffsetMinutes(tz) {
+            if (tz === 'UTC') return 0;
+            const now = new Date();
+            // Create strings representing the exact same moment in both target TZ and UTC
+            const tzString = now.toLocaleString('en-US', { timeZone: tz });
+            const utcString = now.toLocaleString('en-US', { timeZone: 'UTC' });
+            
+            // Difference in minutes between the local representation of the timezone and UTC
+            return Math.round((new Date(tzString) - new Date(utcString)) / 60000);
+        }
+
+        /**
+         * Format UTC offset string (e.g., UTC-4:00)
+         */
+        function formatOffsetLabel(offsetMins) {
+            if (offsetMins === 0) return 'UTC';
+            const sign = offsetMins > 0 ? '+' : '-';
+            const absMins = Math.abs(offsetMins);
+            const hrs = Math.floor(absMins / 60);
+            const mins = absMins % 60;
+            return `UTC${sign}${hrs}${mins > 0 ? ':' + String(mins).padStart(2, '0') : ''}`;
+        }
+
+        /**
+         * Translates minutes into 12-hour format string and day relative state
+         */
+        function formatResultTime(totalMinutes) {
+            let dayOffset = 0;
+            let normalizedMinutes = totalMinutes;
+
+            // Handle day boundaries
+            if (normalizedMinutes >= 1440) {
+                dayOffset = 1;
+                normalizedMinutes -= 1440;
+            } else if (normalizedMinutes < 0) {
+                dayOffset = -1;
+                normalizedMinutes += 1440;
+            }
+
+            const hours24 = Math.floor(normalizedMinutes / 60);
+            const mins = normalizedMinutes % 60;
+            
+            const ampm = hours24 >= 12 ? 'PM' : 'AM';
+            const hours12 = hours24 % 12 || 12;
+
+            const timeStr = `${hours12}:${String(mins).padStart(2, '0')} ${ampm}`;
+            
+            let dayClass = 'badge-today';
+            let dayText = 'Today';
+            if (dayOffset === 1) {
+                dayClass = 'badge-tomorrow';
+                dayText = 'Tomorrow';
+            } else if (dayOffset === -1) {
+                dayClass = 'badge-yesterday';
+                dayText = 'Yesterday';
+            }
+
+            return { timeStr, dayClass, dayText };
+        }
+
+        /**
+         * Core Translation Logic
+         */
+        function executeTranslation() {
+            if (!timeInput.value) return;
+
+            // 1. Parse input time into total minutes from midnight
+            const [inputHours, inputMins] = timeInput.value.split(':').map(Number);
+            const inputTotalMinutes = (inputHours * 60) + inputMins;
+
+            // 2. Get Source Offset
+            const sourceTZ = sourceTimezoneSelect.value;
+            const sourceOffset = getOffsetMinutes(sourceTZ);
+
+            // 3. Clear Grid
+            resultsGrid.innerHTML = '';
+
+            // 4. Calculate for all configured timezones
+            timezones.forEach(tz => {
+                const targetOffset = getOffsetMinutes(tz.id);
+                
+                // Diff calculation: How far is target from source?
+                const diffMinutes = targetOffset - sourceOffset;
+                
+                // Add diff to input time
+                const targetTotalMinutes = inputTotalMinutes + diffMinutes;
+
+                // Format outcome
+                const result = formatResultTime(targetTotalMinutes);
+                const offsetLabel = formatOffsetLabel(targetOffset);
+
+                // Build Card DOM
+                const card = document.createElement('div');
+                card.className = 'tz-card';
+                card.innerHTML = `
+                    <div class="tz-city">${tz.name}</div>
+                    <div class="tz-time-container">
+                        <div class="tz-time">${result.timeStr}</div>
+                        <div class="tz-day-badge ${result.dayClass}">${result.dayText}</div>
+                    </div>
+                    <div class="tz-label">${tz.id} (${offsetLabel})</div>
+                `;
+                resultsGrid.appendChild(card);
+            });
+
+            // Make results visible
+            resultsHeader.style.opacity = '1';
+            resultsGrid.style.opacity = '1';
+        }
+
+        /**
+         * Handler to trigger the required 2-second custom loading animation
+         */
+        function handleTranslateClick() {
+            if (!timeInput.value) {
+                timeInput.focus();
+                return;
+            }
+
+            // Show Loader (Block interactions)
+            loaderOverlay.classList.add('active');
+
+            // Force exactly ~2 seconds animation requirement
+            setTimeout(() => {
+                executeTranslation();
+                // Hide Loader smoothly
+                loaderOverlay.classList.remove('active');
+            }, 2000);
+        }
+
+        // Bind Events
+        btnTranslate.addEventListener('click', handleTranslateClick);
+
+        // Run Init
+        init();
+
+    </script>
+</body>
+</html>
