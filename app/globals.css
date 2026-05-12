@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg: 255 255 255;
+    --bg-subtle: 245 245 245;
+    --bg-muted: 235 235 235;
+    --border: 228 228 228;
+    --border-subtle: 242 242 242;
+    --text: 10 10 10;
+    --text-secondary: 82 82 82;
+    --text-tertiary: 163 163 163;
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px -1px rgba(0,0,0,0.04);
+    --card-shadow-hover: 0 4px 16px rgba(0,0,0,0.07), 0 2px 6px -2px rgba(0,0,0,0.05);
+  }
+
+  .dark {
+    --bg: 10 10 10;
+    --bg-subtle: 18 18 18;
+    --bg-muted: 28 28 28;
+    --border: 38 38 38;
+    --border-subtle: 28 28 28;
+    --text: 250 250 250;
+    --text-secondary: 163 163 163;
+    --text-tertiary: 82 82 82;
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px -1px rgba(0,0,0,0.4);
+    --card-shadow-hover: 0 4px 16px rgba(0,0,0,0.6), 0 2px 6px -2px rgba(0,0,0,0.5);
+  }
+
+  * { box-sizing: border-box; }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: rgb(var(--bg));
+    color: rgb(var(--text));
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  ::selection { background: rgb(var(--text) / 0.1); }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgb(var(--border)); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgb(var(--text-tertiary)); }
+}
+
+@layer utilities {
+  .bg-surface { background-color: rgb(var(--bg)); }
+  .bg-surface-subtle { background-color: rgb(var(--bg-subtle)); }
+  .bg-surface-muted { background-color: rgb(var(--bg-muted)); }
+  .border-default { border-color: rgb(var(--border)); }
+  .border-subtle-color { border-color: rgb(var(--border-subtle)); }
+  .text-primary { color: rgb(var(--text)); }
+  .text-secondary-color { color: rgb(var(--text-secondary)); }
+  .text-tertiary-color { color: rgb(var(--text-tertiary)); }
+
+  .status-online { background-color: #23a55a; }
+  .status-dnd    { background-color: #f23f43; }
+  .status-idle   { background-color: #f0b232; }
+  .status-offline{ background-color: #80848e; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @keyframes shimmer {
+    0%   { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+  }
+
+  .animate-fade-up {
+    animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.4s ease both;
+  }
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      rgb(var(--bg-muted)) 25%,
+      rgb(var(--border)) 50%,
+      rgb(var(--bg-muted)) 75%
+    );
+    background-size: 800px 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
