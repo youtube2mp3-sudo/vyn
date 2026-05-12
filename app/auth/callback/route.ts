@@ -34,9 +34,7 @@ export async function GET(request: NextRequest) {
     const accessToken = session?.session?.provider_token;
 
     if (!accessToken) {
-      console.warn(
-        "⚠️ No provider token available, using metadata only"
-      );
+      console.warn("⚠️ No provider token available, using metadata only");
       await syncProfileWithMetadata(supabase, user);
       return NextResponse.redirect(`${origin}${next}`);
     }
@@ -71,7 +69,7 @@ export async function GET(request: NextRequest) {
       console.error("❌ Failed to fetch Discord profile:", fetchError);
     }
 
-    // Step 4: Sync profile with either Discord API data or metadata
+    // Step 4: Sync profile
     await syncDiscordProfile(supabase, user, discordUser);
 
     return NextResponse.redirect(`${origin}${next}`);
@@ -84,44 +82,55 @@ export async function GET(request: NextRequest) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function syncProfileWithMetadata(supabase: any, user: any) {
   console.log("📝 Syncing profile from metadata only");
-
   const metadata = user.user_metadata || {};
   const identityData = user.identities?.[0]?.identity_data || {};
-
-  const discordId = metadata.provider_id || identityData.sub || user.id;
-
-  const profileData = buildProfileData(user, null, metadata, identityData);
-
-  console.log("💾 Upserting profile:", profileData);
-
-  const { error } = await supabase
-    .from("profiles")
-    .upsert(profileData, { onConflict: "id" });
-
-  if (error) {
-    console.error("❌ Profile upsert failed:", error);
-  } else {
-    console.log("✅ Profile synced successfully");
-  }
+  await upsertProfile(supabase, user, null, metadata, identityData);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function syncDiscordProfile(supabase: any, user: any, discordUser: any) {
   console.log("📝 Syncing Discord profile");
-
   const metadata = user.user_metadata || {};
   const identityData = user.identities?.[0]?.identity_data || {};
+  await upsertProfile(supabase, user, discordUser, metadata, identityData);
+}
 
-  const profileData = buildProfileData(
-    user,
-    discordUser,
-    metadata,
-    identityData
-  );
+/**
+ * Safe upsert: for returning users, fetch existing row and only
+ * replace fields that have a fresher non-null value. This prevents
+ * a missing provider_token from wiping avatar/banner/badges.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function upsertProfile(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  user: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  discordUser: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  metadata: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  identityData: any
+) {
+  // Fetch existing profile so we can merge safely
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("avatar_url,banner_url,badges,username,display_name,bio")
+    .eq("id", user.id)
+    .maybeSingle();
 
-  console.log("💾 Final profile data:", profileData);
+  const fresh = buildProfileData(user, discordUser, metadata, identityData, existing);
 
-  const { error } = await supabase.from("profiles").upsert(profileData, {
+  console.log("💾 Upserting profile:", {
+    id: fresh.id,
+    username: fresh.username,
+    avatar: fresh.avatar_url ? "present" : "null",
+    banner: fresh.banner_url ? "present" : "null",
+    badges: fresh.badges?.length ?? 0,
+  });
+
+  const { error } = await supabase.from("profiles").upsert(fresh, {
     onConflict: "id",
   });
 
@@ -135,10 +144,16 @@ async function syncDiscordProfile(supabase: any, user: any, discordUser: any) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function buildProfileData(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   user: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   discordUser: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata: any,
-  identityData: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  identityData: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  existing: any
 ) {
   // Extract Discord ID
   const discordId =
@@ -147,45 +162,61 @@ function buildProfileData(
     identityData.sub ||
     user.id;
 
-  // Extract avatar (Discord API priority)
+  // --- Avatar ---
+  // Prefer freshly-fetched Discord hash → metadata hash → keep existing URL
   const avatarHash =
     discordUser?.avatar || metadata.avatar || identityData.avatar;
-  const avatarUrl =
+  const freshAvatarUrl =
     avatarHash && discordId
       ? `https://cdn.discordapp.com/avatars/${discordId}/${avatarHash}.webp?size=256`
       : null;
+  const avatarUrl = freshAvatarUrl ?? existing?.avatar_url ?? null;
 
-  // Extract banner (Discord API priority)
+  // --- Banner ---
   const bannerHash =
     discordUser?.banner || metadata.banner || identityData.banner;
-  const bannerUrl =
+  const freshBannerUrl =
     bannerHash && discordId
       ? `https://cdn.discordapp.com/banners/${discordId}/${bannerHash}.webp?size=600`
       : null;
+  // Only overwrite existing banner when we have a fresh value; null banner_hash
+  // from an API call without scope shouldn't erase a previously stored banner.
+  const bannerUrl =
+    discordUser !== null
+      ? freshBannerUrl // We had a real API call — trust result (even null means no banner)
+      : (freshBannerUrl ?? existing?.banner_url ?? null);
 
-  // Extract username
-  const username =
+  // --- Username ---
+  const freshUsername =
     discordUser?.username ||
     metadata.username ||
     metadata.user_name ||
     identityData.username ||
-    "unknown";
+    null;
+  const username = freshUsername ?? existing?.username ?? "unknown";
 
-  // Extract display name
-  const displayName =
+  // --- Display name ---
+  const freshDisplayName =
     discordUser?.global_name ||
     metadata.global_name ||
     metadata.display_name ||
     null;
+  const displayName = freshDisplayName ?? existing?.display_name ?? null;
 
-  // Extract bio
-  const bio =
-    discordUser?.bio || metadata.bio || null;
+  // --- Bio ---
+  const freshBio = discordUser?.bio || metadata.bio || null;
+  const bio = freshBio ?? existing?.bio ?? null;
 
-  // Extract badges
+  // --- Badges ---
   const publicFlags =
-    discordUser?.public_flags || metadata.public_flags || 0;
-  const badges = parseBadges(publicFlags);
+    discordUser?.public_flags ?? metadata.public_flags ?? null;
+  let badges: DiscordBadge[];
+  if (publicFlags !== null) {
+    badges = parseBadges(publicFlags);
+  } else {
+    // No flags data — preserve existing badges
+    badges = existing?.badges ?? [];
+  }
 
   return {
     id: user.id,
@@ -197,6 +228,8 @@ function buildProfileData(
     bio,
     gender: metadata.gender || null,
     badges,
+    // Preserve presence — don't reset to offline on every login;
+    // let it be managed by realtime updates separately.
     presence: "offline",
     updated_at: new Date().toISOString(),
   };
