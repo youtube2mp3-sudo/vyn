@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { ThemeToggle } from "./ThemeToggle";
 import { SignOutButton } from "./SignOutButton";
 
@@ -13,16 +14,23 @@ export function Navbar({ user }: NavbarProps) {
   return (
     <header className="sticky top-0 z-40 border-b border-[rgb(var(--border))] bg-[rgb(var(--bg)/0.85)] backdrop-blur-md">
       <div className="mx-auto flex h-12 max-w-7xl items-center justify-between px-6">
-        {/* Wordmark */}
+        {/* Logo wordmark */}
         <a
           href="/"
-          className="
-            text-[13px] font-medium tracking-[-0.01em]
-            text-[rgb(var(--text))]
-            transition-opacity hover:opacity-70
-          "
+          className="flex items-center gap-2 transition-opacity hover:opacity-70"
+          aria-label="Profiles — home"
         >
-          Profiles
+          <Image
+            src="/logo.PNG"
+            alt="Profiles logo"
+            width={24}
+            height={24}
+            className="rounded-md"
+            priority
+          />
+          <span className="text-[13px] font-medium tracking-[-0.01em] text-[rgb(var(--text))]">
+            Profiles
+          </span>
         </a>
 
         {/* Actions */}

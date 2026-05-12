@@ -8,10 +8,21 @@ export const metadata: Metadata = {
   title: "Profiles — A minimal Discord directory",
   description:
     "A clean, minimalist board of Discord profiles. Sign in once, appear forever.",
+  icons: {
+    icon: "/logo.PNG",
+    apple: "/logo.PNG",
+  },
   openGraph: {
     title: "Profiles",
     description: "A minimal Discord directory",
     type: "website",
+    images: [{ url: "/logo.PNG", width: 500, height: 500, alt: "Profiles" }],
+  },
+  twitter: {
+    card: "summary",
+    title: "Profiles",
+    description: "A minimal Discord directory",
+    images: ["/logo.PNG"],
   },
 };
 
