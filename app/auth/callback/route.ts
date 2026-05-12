@@ -26,39 +26,77 @@ export async function GET(request: NextRequest) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function syncDiscordProfile(supabase: any, user: any) {
+  // Get the Discord OAuth provider session
+  const { data: session } = await supabase.auth.getSession();
+  const accessToken = session?.session?.provider_token;
+
+  if (!accessToken) {
+    console.error("No Discord access token found");
+    return;
+  }
+
+  // Fetch full Discord user profile using the access token
+  let discordUser: any = null;
+  try {
+    const response = await fetch("https://discord.com/api/v10/users/@me", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (response.ok) {
+      discordUser = await response.json();
+      console.log("Discord API user:", JSON.stringify(discordUser, null, 2));
+    } else {
+      console.warn("Failed to fetch Discord user:", response.status, response.statusText);
+    }
+  } catch (fetchError) {
+    console.error("Error fetching Discord user:", fetchError);
+  }
+
+  // Fall back to metadata if Discord API fetch fails
   const metadata = user.user_metadata || {};
   const identityData = user.identities?.[0]?.identity_data || {};
 
-  console.log("Full user object:", JSON.stringify(user, null, 2));
-  console.log("Metadata:", JSON.stringify(metadata, null, 2));
-  console.log("Identity data:", JSON.stringify(identityData, null, 2));
+  // Extract Discord ID (prioritize from API response)
+  const discordId = discordUser?.id || metadata.provider_id || identityData.sub || user.id;
 
-  const discordId = metadata.provider_id || identityData.sub || user.id;
-  const avatarHash = metadata.avatar || identityData.avatar;
-  const avatarUrl = avatarHash
+  // Extract avatar (Discord API has 'avatar' field)
+  const avatarHash = discordUser?.avatar || metadata.avatar || identityData.avatar;
+  const avatarUrl = avatarHash && discordId
     ? `https://cdn.discordapp.com/avatars/${discordId}/${avatarHash}.webp?size=256`
     : null;
 
-  const bannerHash = metadata.banner || identityData.banner;
-  const bannerUrl = bannerHash
+  // Extract banner (Discord API has 'banner' field)
+  const bannerHash = discordUser?.banner || metadata.banner || identityData.banner;
+  const bannerUrl = bannerHash && discordId
     ? `https://cdn.discordapp.com/banners/${discordId}/${bannerHash}.webp?size=600`
     : null;
+
+  // Extract username
+  const username = discordUser?.username || metadata.username || metadata.user_name || identityData.username || "unknown";
+
+  // Extract display name (Discord API uses 'global_name')
+  const displayName = discordUser?.global_name || metadata.global_name || metadata.display_name || null;
+
+  // Extract accent color
+  const accentColor = discordUser?.accent_color || metadata.accent_color || null;
 
   const profileData = {
     id: user.id,
     discord_id: discordId,
-    username: metadata.username || metadata.user_name || identityData.username || "unknown",
-    display_name: metadata.global_name || metadata.display_name || metadata.full_name || null,
+    username,
+    display_name: displayName,
     avatar_url: avatarUrl,
     banner_url: bannerUrl,
-    bio: metadata.bio || identityData.bio || null,
+    bio: discordUser?.bio || metadata.bio || null,
     gender: metadata.gender || null,
-    badges: parseBadges(metadata.public_flags || identityData.public_flags || 0),
+    badges: parseBadges(discordUser?.public_flags || metadata.public_flags || 0),
     presence: "offline",
     updated_at: new Date().toISOString(),
   };
 
-  console.log("Synced profile data:", JSON.stringify(profileData, null, 2));
+  console.log("Final profile data:", JSON.stringify(profileData, null, 2));
 
   await supabase.from("profiles").upsert(profileData, { onConflict: "id" });
 }
