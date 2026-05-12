@@ -14,7 +14,6 @@ export function DiscordLoginButton() {
       provider: "discord",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
-        scopes: "identify email profile guilds",
       },
     });
 
