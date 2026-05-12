@@ -29,8 +29,12 @@ async function syncDiscordProfile(supabase: any, user: any) {
   const metadata = user.user_metadata || {};
   const identityData = user.identities?.[0]?.identity_data || {};
 
+  console.log("Full user object:", JSON.stringify(user, null, 2));
+  console.log("Metadata:", JSON.stringify(metadata, null, 2));
+  console.log("Identity data:", JSON.stringify(identityData, null, 2));
+
   const discordId = metadata.provider_id || identityData.sub || user.id;
-  const avatarHash = metadata.avatar_hash || identityData.avatar;
+  const avatarHash = metadata.avatar || identityData.avatar;
   const avatarUrl = avatarHash
     ? `https://cdn.discordapp.com/avatars/${discordId}/${avatarHash}.webp?size=256`
     : null;
@@ -43,16 +47,18 @@ async function syncDiscordProfile(supabase: any, user: any) {
   const profileData = {
     id: user.id,
     discord_id: discordId,
-    username: metadata.user_name || metadata.name || "unknown",
-    display_name: metadata.full_name || metadata.global_name || null,
+    username: metadata.username || metadata.user_name || identityData.username || "unknown",
+    display_name: metadata.global_name || metadata.display_name || metadata.full_name || null,
     avatar_url: avatarUrl,
     banner_url: bannerUrl,
-    bio: metadata.bio || null,
+    bio: metadata.bio || identityData.bio || null,
     gender: metadata.gender || null,
-    badges: parseBadges(metadata.public_flags || 0),
+    badges: parseBadges(metadata.public_flags || identityData.public_flags || 0),
     presence: "offline",
     updated_at: new Date().toISOString(),
   };
+
+  console.log("Synced profile data:", JSON.stringify(profileData, null, 2));
 
   await supabase.from("profiles").upsert(profileData, { onConflict: "id" });
 }
