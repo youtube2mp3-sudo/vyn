@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { DiscordLoginButton } from "@/components/DiscordLoginButton";
@@ -15,7 +16,7 @@ export default async function LandingPage() {
 
   return (
     <div className="relative flex min-h-svh flex-col">
-      {/* Theme toggle — top right */}
+      {/* Theme toggle */}
       <div className="absolute right-6 top-5 z-10">
         <ThemeToggle />
       </div>
@@ -26,16 +27,26 @@ export default async function LandingPage() {
           className="flex flex-col items-center gap-10 text-center animate-fade-up"
           style={{ animationDuration: "0.6s" }}
         >
-          {/* Wordmark */}
-          <div className="space-y-4">
-            <h1 className="text-[40px] font-semibold tracking-[-0.04em] leading-none text-[rgb(var(--text))] sm:text-[56px]">
-              Profiles
-            </h1>
-            <p className="max-w-xs text-[15px] leading-relaxed text-[rgb(var(--text-secondary))]">
-              A minimal directory of Discord users.
-              <br />
-              Sign in once. Appear forever.
-            </p>
+          {/* Logo + wordmark */}
+          <div className="flex flex-col items-center gap-5">
+            <Image
+              src="/logo.PNG"
+              alt="Profiles"
+              width={72}
+              height={72}
+              className="rounded-2xl"
+              priority
+            />
+            <div className="space-y-3">
+              <h1 className="text-[40px] font-semibold tracking-[-0.04em] leading-none text-[rgb(var(--text))] sm:text-[52px]">
+                Profiles
+              </h1>
+              <p className="max-w-xs text-[15px] leading-relaxed text-[rgb(var(--text-secondary))]">
+                A minimal directory of Discord users.
+                <br />
+                Sign in once. Appear forever.
+              </p>
+            </div>
           </div>
 
           {/* CTA */}

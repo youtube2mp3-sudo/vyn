@@ -1,40 +1,12 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import Image from "next/image";
 import type { UserProfile, PresenceStatus } from "@/types";
+import { BADGE_REGISTRY } from "@/lib/badges";
 
-const BADGE_LABELS: Record<string, string> = {
-  staff: "Discord Staff",
-  partner: "Partnered Server Owner",
-  hypesquad: "HypeSquad Events",
-  bug_hunter_level_1: "Bug Hunter Level 1",
-  bug_hunter_level_2: "Bug Hunter Level 2",
-  hypesquad_online_house_1: "HypeSquad Bravery",
-  hypesquad_online_house_2: "HypeSquad Brilliance",
-  hypesquad_online_house_3: "HypeSquad Balance",
-  premium_early_supporter: "Early Supporter",
-  verified_developer: "Early Verified Bot Developer",
-  certified_moderator: "Discord Certified Moderator",
-  active_developer: "Active Developer",
-};
+// ── Status dot ───────────────────────────────────────────────────────────────
 
-const BADGE_EMOJIS: Record<string, string> = {
-  staff: "👮",
-  partner: "🤝",
-  hypesquad: "🏆",
-  bug_hunter_level_1: "🐛",
-  bug_hunter_level_2: "🏅",
-  hypesquad_online_house_1: "🛡️",
-  hypesquad_online_house_2: "💎",
-  hypesquad_online_house_3: "⚖️",
-  premium_early_supporter: "⭐",
-  verified_developer: "🔧",
-  certified_moderator: "✅",
-  active_developer: "🏗️",
-};
-
-// Presence dot — absolutely positioned bottom-right of avatar,
-// matching Discord's layout exactly.
 function StatusDot({ status }: { status: PresenceStatus }) {
   const colorClass: Record<PresenceStatus, string> = {
     online: "status-online",
@@ -43,7 +15,6 @@ function StatusDot({ status }: { status: PresenceStatus }) {
     offline: "status-offline",
     invisible: "status-offline",
   };
-
   const label: Record<PresenceStatus, string> = {
     online: "Online",
     idle: "Idle",
@@ -51,15 +22,9 @@ function StatusDot({ status }: { status: PresenceStatus }) {
     offline: "Offline",
     invisible: "Invisible",
   };
-
   return (
     <span
-      className={`
-        absolute bottom-0 right-0
-        h-[14px] w-[14px] rounded-full
-        border-[2.5px] border-[rgb(var(--bg-subtle))]
-        ${colorClass[status]}
-      `}
+      className={`absolute bottom-0 right-0 h-[14px] w-[14px] rounded-full border-[2.5px] border-[rgb(var(--bg-subtle))] ${colorClass[status]}`}
       aria-label={label[status]}
       role="img"
       title={label[status]}
@@ -67,36 +32,125 @@ function StatusDot({ status }: { status: PresenceStatus }) {
   );
 }
 
+// ── Date helpers ──────────────────────────────────────────────────────────────
+
 function formatJoinDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short", day: "numeric", year: "numeric",
   });
 }
 
 function formatRelativeTime(iso: string): string {
-  const now = Date.now();
-  const then = new Date(iso).getTime();
-  const diff = Math.floor((now - then) / 1000); // seconds
-
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
   if (diff < 60) return "just now";
-  if (diff < 3600) {
-    const m = Math.floor(diff / 60);
-    return `${m} minute${m !== 1 ? "s" : ""} ago`;
-  }
-  if (diff < 86400) {
-    const h = Math.floor(diff / 3600);
-    return `${h} hour${h !== 1 ? "s" : ""} ago`;
-  }
-  const days = Math.floor(diff / 86400);
-  if (days < 30) return `${days} day${days !== 1 ? "s" : ""} ago`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months} month${months !== 1 ? "s" : ""} ago`;
-  const years = Math.floor(months / 12);
-  return `${years} year${years !== 1 ? "s" : ""} ago`;
+  if (diff < 3600) { const m = Math.floor(diff / 60); return `${m}m ago`; }
+  if (diff < 86400) { const h = Math.floor(diff / 3600); return `${h}h ago`; }
+  const d = Math.floor(diff / 86400);
+  if (d < 30) return `${d}d ago`;
+  const mo = Math.floor(d / 30);
+  if (mo < 12) return `${mo}mo ago`;
+  return `${Math.floor(mo / 12)}y ago`;
 }
+
+// ── Badge chip ────────────────────────────────────────────────────────────────
+
+function BadgeChip({ id, label }: { id: string; label: string }) {
+  const meta = BADGE_REGISTRY[id];
+  const symbol = meta?.symbol ?? "🏷️";
+  const displayLabel = meta?.label ?? label;
+
+  return (
+    <span
+      aria-label={displayLabel}
+      title={displayLabel}
+      className="
+        relative inline-flex h-[22px] w-[22px] items-center justify-center
+        rounded-md text-[12px]
+        bg-[rgb(var(--bg-muted))]
+        transition-transform duration-150 hover:scale-125
+        cursor-default group/badge
+      "
+    >
+      {symbol}
+      {/* Tooltip */}
+      <span
+        role="tooltip"
+        className="
+          pointer-events-none absolute bottom-full left-1/2 mb-1.5
+          -translate-x-1/2 whitespace-nowrap rounded-md
+          bg-[rgb(var(--text))] px-2 py-1
+          text-[10px] font-medium text-[rgb(var(--bg))]
+          opacity-0 group-hover/badge:opacity-100
+          transition-opacity duration-150 z-20
+        "
+      >
+        {displayLabel}
+      </span>
+    </span>
+  );
+}
+
+// ── Copy button ───────────────────────────────────────────────────────────────
+
+function CopyButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // Fallback for older browsers
+      const el = document.createElement("textarea");
+      el.value = value;
+      el.style.position = "fixed";
+      el.style.opacity = "0";
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    }
+  }, [value]);
+
+  return (
+    <button
+      onClick={handleCopy}
+      aria-label={copied ? "Copied!" : "Copy Discord ID"}
+      title={copied ? "Copied!" : "Copy Discord ID"}
+      className="
+        inline-flex items-center justify-center
+        h-4 w-4 rounded
+        text-[rgb(var(--text-tertiary))]
+        hover:text-[rgb(var(--text-secondary))]
+        hover:bg-[rgb(var(--bg-muted))]
+        transition-all duration-150
+        focus-visible:outline-none focus-visible:ring-1
+        focus-visible:ring-[rgb(var(--border))]
+        shrink-0
+      "
+    >
+      {copied ? (
+        // Checkmark
+        <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+          <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8"
+            strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : (
+        // Copy icon
+        <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+          <rect x="4" y="4" width="7" height="7" rx="1.2" stroke="currentColor" strokeWidth="1.2" />
+          <path d="M8 4V2.8A.8.8 0 0 0 7.2 2H2.8A.8.8 0 0 0 2 2.8v4.4A.8.8 0 0 0 2.8 8H4"
+            stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+// ── ProfileCard ───────────────────────────────────────────────────────────────
 
 interface ProfileCardProps {
   profile: UserProfile;
@@ -137,23 +191,11 @@ export function ProfileCard({ profile, style }: ProfileCardProps) {
         )}
       </div>
 
-      {/* Avatar row — avatar overlaps banner, status dot anchored bottom-right */}
+      {/* Avatar + status */}
       <div className="relative px-4 pb-0">
-        {/* Avatar wrapper: absolute, overlapping banner */}
         <div className="absolute -top-[26px] left-4">
-          <div
-            className="
-              relative h-[52px] w-[52px] shrink-0 overflow-visible
-            "
-          >
-            {/* Circle clip for avatar image */}
-            <div
-              className="
-                h-full w-full overflow-hidden rounded-full
-                border-2 border-[rgb(var(--bg-subtle))]
-                bg-[rgb(var(--bg-muted))]
-              "
-            >
+          <div className="relative h-[52px] w-[52px] shrink-0 overflow-visible">
+            <div className="h-full w-full overflow-hidden rounded-full border-2 border-[rgb(var(--bg-subtle))] bg-[rgb(var(--bg-muted))]">
               {profile.avatar_url ? (
                 <Image
                   src={profile.avatar_url}
@@ -168,66 +210,40 @@ export function ProfileCard({ profile, style }: ProfileCardProps) {
                 </div>
               )}
             </div>
-
-            {/* Status dot — Discord placement: bottom-right of avatar circle */}
             <StatusDot status={profile.presence} />
           </div>
         </div>
-
-        {/* Spacer so content starts below avatar */}
         <div className="h-7" />
       </div>
 
       {/* Content */}
-      <div className="flex flex-col gap-3 px-4 pb-4 pt-1">
-        {/* Names */}
+      <div className="flex flex-col gap-2.5 px-4 pb-4 pt-1">
+        {/* Name + badges on same row */}
         <div className="min-w-0">
-          <h2 className="truncate text-[15px] font-semibold leading-snug text-[rgb(var(--text))]">
-            {displayName}
-          </h2>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <h2 className="truncate text-[15px] font-semibold leading-snug text-[rgb(var(--text))]">
+              {displayName}
+            </h2>
+            {/* Inline badges (up to 4 beside name) */}
+            {profile.badges && profile.badges.length > 0 && (
+              <div className="flex items-center gap-0.5 shrink-0">
+                {profile.badges.slice(0, 4).map((badge) => (
+                  <BadgeChip key={badge.id} id={badge.id} label={badge.label} />
+                ))}
+              </div>
+            )}
+          </div>
           <p className="truncate text-[12px] font-normal text-[rgb(var(--text-tertiary))] font-mono">
             @{profile.username}
           </p>
         </div>
 
-        {/* Badges */}
-        {profile.badges && profile.badges.length > 0 && (
-          <div className="flex flex-wrap gap-1" aria-label="Badges">
-            {profile.badges.slice(0, 6).map((badge) => {
-              const emoji = BADGE_EMOJIS[badge.id] || "🏷️";
-              const label = BADGE_LABELS[badge.id] || badge.label;
-              return (
-                <span
-                  key={badge.id}
-                  aria-label={label}
-                  className="
-                    relative inline-flex h-6 w-6 items-center justify-center
-                    rounded-md bg-[rgb(var(--bg-muted))]
-                    text-[13px] transition-transform duration-150
-                    hover:scale-110
-                    group/badge cursor-default
-                  "
-                >
-                  {emoji}
-                  {/* Tooltip */}
-                  <span
-                    className="
-                      pointer-events-none absolute bottom-full left-1/2
-                      mb-1.5 -translate-x-1/2
-                      whitespace-nowrap rounded-md
-                      bg-[rgb(var(--text))] px-2 py-1
-                      text-[10px] font-medium text-[rgb(var(--bg))]
-                      opacity-0 group-hover/badge:opacity-100
-                      transition-opacity duration-150
-                      z-10
-                    "
-                    role="tooltip"
-                  >
-                    {label}
-                  </span>
-                </span>
-              );
-            })}
+        {/* Overflow badges (5+) */}
+        {profile.badges && profile.badges.length > 4 && (
+          <div className="flex flex-wrap gap-1">
+            {profile.badges.slice(4).map((badge) => (
+              <BadgeChip key={badge.id} id={badge.id} label={badge.label} />
+            ))}
           </div>
         )}
 
@@ -238,26 +254,18 @@ export function ProfileCard({ profile, style }: ProfileCardProps) {
           </p>
         )}
 
-        {/* Spacer */}
         <div className="mt-auto" />
 
-        {/* Dates + Discord ID footer */}
+        {/* Footer */}
         <div className="border-t border-[rgb(var(--border))] pt-3 space-y-1.5">
-          {/* Join date */}
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] text-[rgb(var(--text-tertiary))]">
-              Joined Board
-            </span>
+            <span className="text-[11px] text-[rgb(var(--text-tertiary))]">Joined</span>
             <span className="font-mono text-[11px] text-[rgb(var(--text-secondary))] tabular-nums">
               {formatJoinDate(profile.created_at)}
             </span>
           </div>
-
-          {/* Last updated */}
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] text-[rgb(var(--text-tertiary))]">
-              Updated
-            </span>
+            <span className="text-[11px] text-[rgb(var(--text-tertiary))]">Updated</span>
             <span
               className="font-mono text-[11px] text-[rgb(var(--text-tertiary))] tabular-nums"
               title={new Date(profile.updated_at).toLocaleString()}
@@ -266,15 +274,13 @@ export function ProfileCard({ profile, style }: ProfileCardProps) {
             </span>
           </div>
 
-          {/* Discord ID */}
-          <p
-            className="
-              font-mono text-[11px] text-[rgb(var(--text-tertiary))]
-              tabular-nums tracking-tight pt-0.5
-            "
-          >
-            {profile.discord_id}
-          </p>
+          {/* Discord ID + copy button */}
+          <div className="flex items-center gap-1.5 pt-0.5">
+            <p className="font-mono text-[11px] text-[rgb(var(--text-tertiary))] tabular-nums tracking-tight truncate flex-1">
+              {profile.discord_id}
+            </p>
+            <CopyButton value={profile.discord_id} />
+          </div>
         </div>
       </div>
     </article>
