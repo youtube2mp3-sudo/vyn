@@ -1,0 +1,107 @@
+/* --- Modern Enhancements --- */
+
+/* Dark Mode Variables */
+[data-theme="dark"] {
+    --color-bg: #0f172a;
+    --color-surface: #1e293b;
+    --color-text-main: #f8fafc;
+    --color-text-muted: #94a3b8;
+    --color-white: #0f172a;
+    /* Invert white for buttons if needed, or keep tailored */
+}
+
+[data-theme="dark"] .project-card,
+[data-theme="dark"] .contact-form,
+[data-theme="dark"] .bg-light,
+[data-theme="dark"] .testimonial-card {
+    background-color: var(--color-surface);
+    color: var(--color-text-main);
+}
+
+[data-theme="dark"] .navbar {
+    background: rgba(15, 23, 42, 0.9);
+}
+
+/* Skills Marquee */
+.marquee-container {
+    width: 100%;
+    overflow: hidden;
+    padding: 2rem 0;
+    background: var(--color-surface);
+    white-space: nowrap;
+    position: relative;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.marquee-content {
+    display: inline-block;
+    animation: marquee 20s linear infinite;
+}
+
+.marquee-content span {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 0 1rem;
+}
+
+.separator {
+    color: var(--color-primary);
+}
+
+@keyframes marquee {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+/* Testimonials Carousel (Scroll Snap) */
+.testimonials-carousel {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 2rem;
+    padding-bottom: 2rem;
+    /* space for scrollbar mainly */
+    scrollbar-width: none;
+    /* Firefox */
+}
+
+.testimonials-carousel::-webkit-scrollbar {
+    display: none;
+    /* Chrome/Safari */
+}
+
+.testimonial-card {
+    flex: 0 0 350px;
+    scroll-snap-align: center;
+    background: white;
+    padding: 2.5rem;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.testimonial-card p {
+    font-size: 1.1rem;
+    font-style: italic;
+    color: var(--color-text-muted);
+    margin-bottom: 1.5rem;
+}
+
+.client-info strong {
+    display: block;
+    color: var(--color-primary);
+}
+
+.client-info span {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+}
