@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import type { UserProfile, PresenceStatus } from "@/types";
 
@@ -31,8 +33,10 @@ const BADGE_EMOJIS: Record<string, string> = {
   active_developer: "🏗️",
 };
 
+// Presence dot — absolutely positioned bottom-right of avatar,
+// matching Discord's layout exactly.
 function StatusDot({ status }: { status: PresenceStatus }) {
-  const cls: Record<PresenceStatus, string> = {
+  const colorClass: Record<PresenceStatus, string> = {
     online: "status-online",
     idle: "status-idle",
     dnd: "status-dnd",
@@ -51,15 +55,47 @@ function StatusDot({ status }: { status: PresenceStatus }) {
   return (
     <span
       className={`
-        block h-3 w-3 rounded-full border-2
-        border-[rgb(var(--bg))]
-        ${cls[status]}
+        absolute bottom-0 right-0
+        h-[14px] w-[14px] rounded-full
+        border-[2.5px] border-[rgb(var(--bg-subtle))]
+        ${colorClass[status]}
       `}
       aria-label={label[status]}
       role="img"
       title={label[status]}
     />
   );
+}
+
+function formatJoinDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatRelativeTime(iso: string): string {
+  const now = Date.now();
+  const then = new Date(iso).getTime();
+  const diff = Math.floor((now - then) / 1000); // seconds
+
+  if (diff < 60) return "just now";
+  if (diff < 3600) {
+    const m = Math.floor(diff / 60);
+    return `${m} minute${m !== 1 ? "s" : ""} ago`;
+  }
+  if (diff < 86400) {
+    const h = Math.floor(diff / 3600);
+    return `${h} hour${h !== 1 ? "s" : ""} ago`;
+  }
+  const days = Math.floor(diff / 86400);
+  if (days < 30) return `${days} day${days !== 1 ? "s" : ""} ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} month${months !== 1 ? "s" : ""} ago`;
+  const years = Math.floor(months / 12);
+  return `${years} year${years !== 1 ? "s" : ""} ago`;
 }
 
 interface ProfileCardProps {
@@ -101,42 +137,49 @@ export function ProfileCard({ profile, style }: ProfileCardProps) {
         )}
       </div>
 
-      {/* Avatar row */}
+      {/* Avatar row — avatar overlaps banner, status dot anchored bottom-right */}
       <div className="relative px-4 pb-0">
-        <div className="absolute -top-6 left-4 flex items-end gap-1.5">
+        {/* Avatar wrapper: absolute, overlapping banner */}
+        <div className="absolute -top-[26px] left-4">
           <div
             className="
-              relative h-[52px] w-[52px] shrink-0 overflow-hidden
-              rounded-full border-2 border-[rgb(var(--bg-subtle))]
-              bg-[rgb(var(--bg-muted))]
+              relative h-[52px] w-[52px] shrink-0 overflow-visible
             "
           >
-            {profile.avatar_url ? (
-              <Image
-                src={profile.avatar_url}
-                alt={`${displayName}'s avatar`}
-                fill
-                className="object-cover"
-                sizes="52px"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-[rgb(var(--text-tertiary))]">
-                {avatarFallback}
-              </div>
-            )}
-          </div>
-          {/* Status dot — anchored bottom-right of avatar */}
-          <div className="relative -top-0.5">
+            {/* Circle clip for avatar image */}
+            <div
+              className="
+                h-full w-full overflow-hidden rounded-full
+                border-2 border-[rgb(var(--bg-subtle))]
+                bg-[rgb(var(--bg-muted))]
+              "
+            >
+              {profile.avatar_url ? (
+                <Image
+                  src={profile.avatar_url}
+                  alt={`${displayName}'s avatar`}
+                  fill
+                  className="object-cover"
+                  sizes="52px"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-[rgb(var(--text-tertiary))]">
+                  {avatarFallback}
+                </div>
+              )}
+            </div>
+
+            {/* Status dot — Discord placement: bottom-right of avatar circle */}
             <StatusDot status={profile.presence} />
           </div>
         </div>
 
-        {/* Spacer for avatar */}
+        {/* Spacer so content starts below avatar */}
         <div className="h-7" />
       </div>
 
       {/* Content */}
-      <div className="flex flex-col gap-3 px-4 pb-5 pt-1">
+      <div className="flex flex-col gap-3 px-4 pb-4 pt-1">
         {/* Names */}
         <div className="min-w-0">
           <h2 className="truncate text-[15px] font-semibold leading-snug text-[rgb(var(--text))]">
@@ -156,16 +199,32 @@ export function ProfileCard({ profile, style }: ProfileCardProps) {
               return (
                 <span
                   key={badge.id}
-                  title={label}
                   aria-label={label}
                   className="
-                    inline-flex h-6 w-6 items-center justify-center
+                    relative inline-flex h-6 w-6 items-center justify-center
                     rounded-md bg-[rgb(var(--bg-muted))]
                     text-[13px] transition-transform duration-150
                     hover:scale-110
+                    group/badge cursor-default
                   "
                 >
                   {emoji}
+                  {/* Tooltip */}
+                  <span
+                    className="
+                      pointer-events-none absolute bottom-full left-1/2
+                      mb-1.5 -translate-x-1/2
+                      whitespace-nowrap rounded-md
+                      bg-[rgb(var(--text))] px-2 py-1
+                      text-[10px] font-medium text-[rgb(var(--bg))]
+                      opacity-0 group-hover/badge:opacity-100
+                      transition-opacity duration-150
+                      z-10
+                    "
+                    role="tooltip"
+                  >
+                    {label}
+                  </span>
                 </span>
               );
             })}
@@ -179,19 +238,39 @@ export function ProfileCard({ profile, style }: ProfileCardProps) {
           </p>
         )}
 
-        {/* Gender */}
-        {profile.gender && (
-          <p className="text-[12px] text-[rgb(var(--text-tertiary))]">
-            {profile.gender}
-          </p>
-        )}
+        {/* Spacer */}
+        <div className="mt-auto" />
 
-        {/* Discord ID */}
-        <div className="mt-auto border-t border-[rgb(var(--border))] pt-3">
+        {/* Dates + Discord ID footer */}
+        <div className="border-t border-[rgb(var(--border))] pt-3 space-y-1.5">
+          {/* Join date */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] text-[rgb(var(--text-tertiary))]">
+              Joined Board
+            </span>
+            <span className="font-mono text-[11px] text-[rgb(var(--text-secondary))] tabular-nums">
+              {formatJoinDate(profile.created_at)}
+            </span>
+          </div>
+
+          {/* Last updated */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] text-[rgb(var(--text-tertiary))]">
+              Updated
+            </span>
+            <span
+              className="font-mono text-[11px] text-[rgb(var(--text-tertiary))] tabular-nums"
+              title={new Date(profile.updated_at).toLocaleString()}
+            >
+              {formatRelativeTime(profile.updated_at)}
+            </span>
+          </div>
+
+          {/* Discord ID */}
           <p
             className="
               font-mono text-[11px] text-[rgb(var(--text-tertiary))]
-              tabular-nums tracking-tight
+              tabular-nums tracking-tight pt-0.5
             "
           >
             {profile.discord_id}
