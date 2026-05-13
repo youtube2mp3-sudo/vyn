@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
         pathname: "/**",
       },
     ],
+    // Allow WebP + AVIF for static images; GIF passes through unoptimized
     formats: ["image/webp", "image/avif"],
   },
 };

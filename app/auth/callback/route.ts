@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}${next}`);
     }
 
-    // Fetch full profile from Discord API
+    // Fetch full Discord profile
     let discordUser = null;
     try {
       const res = await fetch(`${DISCORD_API}/users/@me`, {
@@ -51,6 +51,8 @@ export async function GET(request: NextRequest) {
           username: discordUser.username,
           public_flags: discordUser.public_flags,
           premium_type: discordUser.premium_type,
+          avatar: discordUser.avatar,
+          avatar_decoration_data: discordUser.avatar_decoration_data ?? null,
         });
       } else {
         console.warn(`⚠️ Discord API ${res.status}:`, await res.text());
@@ -67,59 +69,91 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/** Build a CDN avatar URL, handling animated avatars (a_ prefix → .gif). */
+function avatarUrl(discordId: string, hash: string): string {
+  const ext = hash.startsWith("a_") ? "gif" : "webp";
+  return `https://cdn.discordapp.com/avatars/${discordId}/${hash}.${ext}?size=256`;
+}
+
+/** Build a CDN banner URL, handling animated banners (a_ prefix → .gif). */
+function bannerUrl(discordId: string, hash: string): string {
+  const ext = hash.startsWith("a_") ? "gif" : "webp";
+  return `https://cdn.discordapp.com/banners/${discordId}/${hash}.${ext}?size=600`;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function upsertProfile(supabase: any, user: any, discordUser: any) {
   const metadata = user.user_metadata || {};
   const identityData = user.identities?.[0]?.identity_data || {};
 
-  // Fetch existing row for safe-merge
+  // ── Fetch existing row for safe-merge ─────────────────────────────────────
+  // Include gender so it is preserved across re-logins (Discord does not
+  // return a gender field — it would be lost without this select).
   const { data: existing } = await supabase
     .from("profiles")
-    .select("avatar_url,banner_url,badges,username,display_name,bio")
+    .select("avatar_url,banner_url,badges,username,display_name,bio,gender")
     .eq("id", user.id)
     .maybeSingle();
 
-  // ── IDs ──────────────────────────────────────────────────────────────────
+  // ── Discord ID ────────────────────────────────────────────────────────────
   const discordId =
     discordUser?.id || metadata.provider_id || identityData.sub || user.id;
 
   // ── Avatar ────────────────────────────────────────────────────────────────
-  const avatarHash = discordUser?.avatar || metadata.avatar || identityData.avatar;
-  const freshAvatar = avatarHash && discordId
-    ? `https://cdn.discordapp.com/avatars/${discordId}/${avatarHash}.webp?size=256`
-    : null;
-  const avatarUrl = freshAvatar ?? existing?.avatar_url ?? null;
+  const avatarHash =
+    discordUser?.avatar || metadata.avatar || identityData.avatar;
+  const freshAvatar =
+    avatarHash && discordId ? avatarUrl(discordId, avatarHash) : null;
+  // Preserve existing avatar if we have no fresh value
+  const resolvedAvatar = freshAvatar ?? existing?.avatar_url ?? null;
 
   // ── Banner ────────────────────────────────────────────────────────────────
-  const bannerHash = discordUser?.banner || metadata.banner || identityData.banner;
-  const freshBanner = bannerHash && discordId
-    ? `https://cdn.discordapp.com/banners/${discordId}/${bannerHash}.webp?size=600`
-    : null;
-  // Trust a real API response even if null (user removed banner);
-  // fall back to stored value only when we had no API call.
-  const bannerUrl = discordUser !== null
-    ? freshBanner
-    : (freshBanner ?? existing?.banner_url ?? null);
+  const bannerHash =
+    discordUser?.banner || metadata.banner || identityData.banner;
+  const freshBanner =
+    bannerHash && discordId ? bannerUrl(discordId, bannerHash) : null;
+  // When we had a live API call, trust its result (null = user removed banner).
+  // Otherwise preserve whatever was stored.
+  const resolvedBanner =
+    discordUser !== null
+      ? freshBanner
+      : freshBanner ?? existing?.banner_url ?? null;
 
   // ── Text fields ───────────────────────────────────────────────────────────
   const username =
-    discordUser?.username || metadata.username || metadata.user_name ||
-    identityData.username || existing?.username || "unknown";
+    discordUser?.username ||
+    metadata.username ||
+    metadata.user_name ||
+    identityData.username ||
+    existing?.username ||
+    "unknown";
 
   const displayName =
-    discordUser?.global_name || metadata.global_name ||
-    metadata.display_name || existing?.display_name || null;
+    discordUser?.global_name ||
+    metadata.global_name ||
+    metadata.display_name ||
+    existing?.display_name ||
+    null;
 
-  const bio = discordUser?.bio || metadata.bio || existing?.bio || null;
+  const bio =
+    discordUser?.bio || metadata.bio || existing?.bio || null;
+
+  // ── Gender — Discord does not expose gender in its API.
+  // We preserve whatever was previously stored; metadata.gender is always null
+  // from Discord OAuth, so this chain always falls back to existing value.
+  const gender =
+    metadata.gender || existing?.gender || null;
 
   // ── Badges ────────────────────────────────────────────────────────────────
-  // Use full badge parser when we have live Discord data; otherwise preserve.
   let badges: DiscordBadge[];
   if (discordUser !== null) {
+    // Live data: always parse fresh (picks up public_flags + premium_type)
     badges = parseBadges(discordUser);
   } else if (metadata.public_flags != null) {
-    badges = parseBadges(null, metadata.public_flags);
+    // Metadata fallback — at least get flag badges
+    badges = parseBadges(null, Number(metadata.public_flags));
   } else {
+    // No data at all — preserve what we have
     badges = (existing?.badges as DiscordBadge[]) ?? [];
   }
 
@@ -128,10 +162,10 @@ async function upsertProfile(supabase: any, user: any, discordUser: any) {
     discord_id: discordId,
     username,
     display_name: displayName,
-    avatar_url: avatarUrl,
-    banner_url: bannerUrl,
+    avatar_url: resolvedAvatar,
+    banner_url: resolvedBanner,
     bio,
-    gender: metadata.gender || null,
+    gender,
     badges,
     presence: "offline" as const,
     updated_at: new Date().toISOString(),
@@ -140,7 +174,9 @@ async function upsertProfile(supabase: any, user: any, discordUser: any) {
   console.log("💾 Upserting:", {
     username: profile.username,
     avatar: !!profile.avatar_url,
+    animated_avatar: profile.avatar_url?.includes(".gif") ?? false,
     badges: profile.badges.length,
+    gender: profile.gender,
   });
 
   const { error } = await supabase
