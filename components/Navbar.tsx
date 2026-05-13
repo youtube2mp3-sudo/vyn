@@ -11,33 +11,77 @@ interface NavbarProps {
 }
 
 export function Navbar({ user }: NavbarProps) {
+  const displayName = user?.display_name || user?.username;
+  const initials = displayName ? displayName.slice(0, 2).toUpperCase() : null;
+
   return (
-    <header className="sticky top-0 z-40 border-b border-[rgb(var(--border))] bg-[rgb(var(--bg)/0.85)] backdrop-blur-md">
-      <div className="mx-auto flex h-12 max-w-7xl items-center justify-between px-6">
-        {/* Logo wordmark */}
+    <header className="navbar-glass sticky top-0 z-50">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-5">
+
+        {/* ── Left: logo + site name ── */}
         <a
           href="/"
-          className="flex items-center gap-2 transition-opacity hover:opacity-70"
-          aria-label="Profiles — home"
+          className="group flex items-center gap-3 transition-opacity duration-150 hover:opacity-75"
+          aria-label="Cord Board — home"
         >
-          <Image
-            src="/logo.PNG"
-            alt="Profiles logo"
-            width={24}
-            height={24}
-            className="rounded-md"
-            priority
-          />
-          <span className="text-[13px] font-medium tracking-[-0.01em] text-[rgb(var(--text))]">
-            Profiles
+          {/* Logo — 36×36, rounded */}
+          <span className="
+            relative flex h-9 w-9 shrink-0 overflow-hidden rounded-xl
+            ring-1 ring-black/10 dark:ring-white/10
+            transition-transform duration-200 group-hover:scale-[1.05]
+          ">
+            <Image
+              src="/logo.PNG"
+              alt=""
+              fill
+              sizes="36px"
+              className="object-cover"
+              priority
+            />
+          </span>
+
+          <span className="text-[15px] font-semibold tracking-[-0.02em] text-[rgb(var(--text))]">
+            Cord Board
           </span>
         </a>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2">
+        {/* ── Right: theme · logout · avatar ── */}
+        <div className="flex items-center gap-1">
           <ThemeToggle />
-          {user && <SignOutButton />}
+
+          {user && (
+            <>
+              {/* Logout — red door icon */}
+              <SignOutButton />
+
+              {/* User avatar */}
+              <div
+                className="
+                  relative ml-1 h-8 w-8 shrink-0 overflow-hidden
+                  rounded-full bg-[rgb(var(--bg-muted))]
+                  ring-2 ring-[rgb(var(--border))]
+                "
+                aria-label={`Signed in as ${displayName}`}
+                title={`@${user.username}`}
+              >
+                {user.avatar_url ? (
+                  <Image
+                    src={user.avatar_url}
+                    alt={`${displayName}'s avatar`}
+                    fill
+                    sizes="32px"
+                    className="object-cover object-center"
+                  />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-[rgb(var(--text-tertiary))]">
+                    {initials}
+                  </span>
+                )}
+              </div>
+            </>
+          )}
         </div>
+
       </div>
     </header>
   );
