@@ -34,10 +34,11 @@ function StatusDot({ status }: { status: PresenceStatus }) {
   );
 }
 
-// ─── SVG badge chip ───────────────────────────────────────────────────────────
+// ─── Badge chip — official Discord CDN PNG with SVG fallback ─────────────────
 
 function BadgeChip({ id, label }: { id: string; label: string }) {
   const meta = BADGE_REGISTRY[id];
+  const [imgFailed, setImgFailed] = useState(false);
   if (!meta) return null;
 
   return (
@@ -45,18 +46,31 @@ function BadgeChip({ id, label }: { id: string; label: string }) {
       aria-label={meta.label}
       role="img"
       className="group/badge relative inline-flex h-[22px] w-[22px] shrink-0 cursor-default items-center justify-center rounded-md transition-transform duration-150 hover:scale-125"
-      style={{ backgroundColor: meta.color + "22" }} /* 13% opacity tint */
+      style={{ backgroundColor: meta.color + "1a" /* ~10% opacity tint */ }}
     >
-      {/* SVG icon */}
-      <svg
-        viewBox="0 0 16 16"
-        width="13"
-        height="13"
-        fill={meta.color}
-        aria-hidden="true"
-      >
-        <path d={meta.svgPath} />
-      </svg>
+      {/* Primary: official Discord CDN badge image */}
+      {!imgFailed ? (
+        <Image
+          src={meta.cdnImage}
+          alt={meta.label}
+          width={16}
+          height={16}
+          className="select-none"
+          onError={() => setImgFailed(true)}
+          unoptimized /* badge PNGs are tiny; skip Next.js optimization */
+        />
+      ) : (
+        /* Fallback: inline SVG path if CDN is unreachable */
+        <svg
+          viewBox="0 0 16 16"
+          width="13"
+          height="13"
+          fill={meta.color}
+          aria-hidden="true"
+        >
+          <path d={meta.svgPath} />
+        </svg>
+      )}
 
       {/* Tooltip */}
       <span
@@ -66,13 +80,11 @@ function BadgeChip({ id, label }: { id: string; label: string }) {
           mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg
           bg-[rgb(var(--text))] px-2.5 py-1
           text-[10px] font-medium leading-none text-[rgb(var(--bg))]
-          opacity-0 shadow-lg
-          transition-opacity duration-150
+          opacity-0 shadow-lg transition-opacity duration-150
           group-hover/badge:opacity-100
         "
       >
         {meta.label}
-        {/* Arrow */}
         <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-[rgb(var(--text))]" />
       </span>
     </span>
@@ -130,7 +142,9 @@ function CopyButton({ value }: { value: string }) {
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short", day: "numeric", year: "numeric",
+  });
 }
 
 function fmtRel(iso: string) {
@@ -147,10 +161,19 @@ function fmtRel(iso: string) {
 
 // ─── ProfileCard ──────────────────────────────────────────────────────────────
 
-export function ProfileCard({ profile, style }: { profile: UserProfile; style?: React.CSSProperties }) {
+export function ProfileCard({
+  profile,
+  style,
+}: {
+  profile: UserProfile;
+  style?: React.CSSProperties;
+}) {
   const displayName = profile.display_name || profile.username;
   const initials = displayName.slice(0, 2).toUpperCase();
   const hasBadges = profile.badges && profile.badges.length > 0;
+
+  // Detect animated avatar (.gif from CDN) so we can pass unoptimized
+  const isAnimatedAvatar = profile.avatar_url?.includes(".gif") ?? false;
 
   return (
     <article
@@ -164,7 +187,7 @@ export function ProfileCard({ profile, style }: { profile: UserProfile; style?: 
         animate-fade-up
         hover:-translate-y-[2px]
         hover:border-[rgb(var(--text-tertiary)/0.35)]
-        hover:shadow-[0_8px_24px_rgb(0_0_0/0.08)] dark:hover:shadow-[0_8px_24px_rgb(0_0_0/0.4)]
+        hover:shadow-[0_8px_24px_rgb(0_0_0/0.08)]
         focus-within:ring-2 focus-within:ring-[rgb(var(--border))]
       "
     >
@@ -177,23 +200,25 @@ export function ProfileCard({ profile, style }: { profile: UserProfile; style?: 
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+            unoptimized={profile.banner_url.includes(".gif")}
           />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-[rgb(var(--bg-muted))] to-[rgb(var(--border))]" />
         )}
       </div>
 
-      {/* Avatar — overlapping banner, perfectly circular */}
+      {/* Avatar — overlaps banner, overflow-visible so status dot isn't clipped */}
       <div className="relative px-4">
         <div className="absolute -top-7 left-4">
-          {/* Outer ring wrapper — overflow-visible so status dot isn't clipped */}
           <div className="relative h-14 w-14">
-            {/* Circle mask */}
-            <div className="
-              h-14 w-14 overflow-hidden rounded-full
-              border-[3px] border-[rgb(var(--bg-subtle))]
-              bg-[rgb(var(--bg-muted))]
-            ">
+            {/* Circle mask on inner div only */}
+            <div
+              className="
+                h-14 w-14 overflow-hidden rounded-full
+                border-[3px] border-[rgb(var(--bg-subtle))]
+                bg-[rgb(var(--bg-muted))]
+              "
+            >
               {profile.avatar_url ? (
                 <Image
                   src={profile.avatar_url}
@@ -201,6 +226,7 @@ export function ProfileCard({ profile, style }: { profile: UserProfile; style?: 
                   fill
                   sizes="56px"
                   className="object-cover object-center"
+                  unoptimized={isAnimatedAvatar}
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-[rgb(var(--text-tertiary))]">
@@ -208,18 +234,17 @@ export function ProfileCard({ profile, style }: { profile: UserProfile; style?: 
                 </div>
               )}
             </div>
-            {/* Status dot — outside clip area */}
+            {/* Status dot outside clip area */}
             <StatusDot status={profile.presence} />
           </div>
         </div>
-        {/* Spacer matching avatar overlap */}
         <div className="h-8" />
       </div>
 
       {/* Content */}
       <div className="flex flex-col gap-2 px-4 pb-4 pt-0.5">
 
-        {/* Name + inline badges */}
+        {/* Display name + inline badges (up to 4) */}
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-1.5">
             <h2 className="truncate text-[15px] font-semibold leading-tight text-[rgb(var(--text))]">
@@ -238,7 +263,7 @@ export function ProfileCard({ profile, style }: { profile: UserProfile; style?: 
           </p>
         </div>
 
-        {/* Overflow badges */}
+        {/* Overflow badges (5+) */}
         {hasBadges && profile.badges.length > 4 && (
           <div className="flex flex-wrap gap-0.5">
             {profile.badges.slice(4).map((b) => (
@@ -256,7 +281,7 @@ export function ProfileCard({ profile, style }: { profile: UserProfile; style?: 
 
         <div className="mt-auto" />
 
-        {/* Footer */}
+        {/* Footer — dates + Discord ID */}
         <div className="space-y-1.5 border-t border-[rgb(var(--border))] pt-3">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] text-[rgb(var(--text-tertiary))]">Joined</span>
@@ -273,7 +298,6 @@ export function ProfileCard({ profile, style }: { profile: UserProfile; style?: 
               {fmtRel(profile.updated_at)}
             </span>
           </div>
-          {/* ID + copy */}
           <div className="flex items-center gap-1.5 pt-0.5">
             <p className="flex-1 truncate font-mono text-[11px] tabular-nums tracking-tight text-[rgb(var(--text-tertiary))]">
               {profile.discord_id}
